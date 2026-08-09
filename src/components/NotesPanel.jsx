@@ -121,9 +121,6 @@ export default function NotesPanel({
               <Trash2 size={13} className="text-text-muted hover:text-danger" />
             </button>
           </div>
-          {activeNote.audioUrl && (
-            <audio controls src={activeNote.audioUrl} className="w-full mb-2 h-8" />
-          )}
           <textarea
             value={activeNote.contenido}
             onChange={(e) => onUpdateNote(activeNote.id, { contenido: e.target.value })}
