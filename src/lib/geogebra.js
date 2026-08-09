@@ -46,22 +46,45 @@ export async function montarGeoGebra(containerId, { width = 600, height = 340 } 
       showResetIcon: true,
       enableRightClick: false,
       language: "es",
-      appletOnLoad: (api) => resolve(api),
+      appletOnLoad: (api) => {
+        // El cuadro de error nativo de GeoGebra ("?" rojo dentro del
+        // applet) no tiene forma de interceptarse ni de estilizarse, y
+        // rompe la experiencia del paso a paso. Lo apagamos y en su
+        // lugar detectamos fallos por el valor de retorno de
+        // evalCommand (ver correrComandos).
+        if (api.setErrorDialogsActive) api.setErrorDialogsActive(false);
+        resolve(api);
+      },
     };
     const applet = new window.GGBApplet(params, true);
     applet.inject(containerId);
   });
 }
 
+// Gemini a veces devuelve comillas tipográficas (' ' " ") en vez de las
+// rectas que espera la sintaxis de GeoGebra, típicamente al escribir la
+// derivada como f'(x). Eso hace que evalCommand falle silenciosamente
+// (devuelve false, no lanza excepción) con un error de "variable" dentro
+// del applet. Normalizamos antes de ejecutar.
+function normalizarComando(cmd) {
+  return cmd.replace(/[’‘]/g, "'").replace(/[“”]/g, '"');
+}
+
 /**
  * Ejecuta una lista de comandos GeoGebra en orden sobre un applet ya
- * montado. Si un comando falla (sintaxis rara que devolvió Gemini), lo
- * salta sin tumbar los demás pasos.
+ * montado. evalCommand no lanza excepción cuando un comando es inválido:
+ * devuelve false. Revisamos ese valor de retorno (y también envolvemos
+ * en try/catch por si acaso) para poder ver en consola exactamente qué
+ * comando fue el que falló, en vez de que quede en silencio.
  */
 export function correrComandos(ggbApplet, comandos = []) {
-  comandos.forEach((cmd) => {
+  comandos.forEach((cmdOriginal) => {
+    const cmd = normalizarComando(cmdOriginal);
     try {
-      ggbApplet.evalCommand(cmd);
+      const ok = ggbApplet.evalCommand(cmd);
+      if (ok === false) {
+        console.warn("Comando GeoGebra inválido, se omite:", cmd);
+      }
     } catch (err) {
       console.warn("Comando GeoGebra inválido, se omite:", cmd, err);
     }
