@@ -15,7 +15,8 @@ export default defineConfig({
         theme_color: "#100B1C",
         background_color: "#100B1C",
         display: "standalone",
-        start_url: "/",
+        start_url: "/Synapsis/",
+        scope: "/Synapsis/",
         icons: [
           { src: "icon-192.png", sizes: "192x192", type: "image/png" },
           { src: "icon-512.png", sizes: "512x512", type: "image/png" }
