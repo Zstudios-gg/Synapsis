@@ -11,7 +11,7 @@ import {
   watchChat, addChatMessage,
 } from "./lib/firestore";
 import { uploadFile } from "./lib/storage";
-import { preguntarIA } from "./lib/gemini";
+import { preguntarIA, transcribirAudio } from "./lib/gemini";
 
 export default function App() {
   const { user, loading, loginWithGoogle, logout } = useAuth();
@@ -24,6 +24,8 @@ export default function App() {
   const [messages, setMessages] = useState([]);
   const [context, setContext] = useState(null);
   const [sending, setSending] = useState(false);
+  const [transcribing, setTranscribing] = useState(false);
+  const [transcribeError, setTranscribeError] = useState(null);
 
   // Carpetas del usuario
   useEffect(() => {
@@ -77,6 +79,31 @@ export default function App() {
     await registerAttachment(user.uid, selectedFolderId, { nombreArchivo, tipo, urlStorage: url });
   }
 
+  // Sube el audio como adjunto (para poder reescucharlo) Y lo transcribe con
+  // Gemini, creando una nota nueva editable con el texto resultante.
+  async function handleUploadAudio(file) {
+    if (!selectedFolderId) return;
+    setTranscribeError(null);
+    setTranscribing(true);
+    try {
+      const { url, tipo, nombreArchivo } = await uploadFile(user.uid, selectedFolderId, file);
+      await registerAttachment(user.uid, selectedFolderId, { nombreArchivo, tipo, urlStorage: url });
+
+      const texto = await transcribirAudio(file);
+
+      const fecha = new Date().toLocaleDateString("es-MX", { day: "2-digit", month: "2-digit", year: "numeric" });
+      const titulo = `Audio ${fecha}`;
+      const ref = await createNote(user.uid, selectedFolderId, titulo);
+      await updateNote(user.uid, selectedFolderId, ref.id, { contenido: texto, audioUrl: url });
+      setActiveNote({ id: ref.id, titulo, contenido: texto, audioUrl: url });
+    } catch (err) {
+      console.error("Error transcribiendo audio:", err);
+      setTranscribeError("No se pudo transcribir el audio. Intenta de nuevo.");
+    } finally {
+      setTranscribing(false);
+    }
+  }
+
   async function handleSendMessage(texto) {
     setSending(true);
     try {
@@ -120,6 +147,9 @@ export default function App() {
         onUpdateNote={handleUpdateNote}
         onDeleteNote={(id) => { deleteNote(user.uid, selectedFolderId, id); setActiveNote(null); }}
         onUploadFile={handleUploadFile}
+        onUploadAudio={handleUploadAudio}
+        transcribing={transcribing}
+        transcribeError={transcribeError}
         onDeleteAttachment={(id) => deleteAttachment(user.uid, selectedFolderId, id)}
         onUseAsContext={setContext}
       />
