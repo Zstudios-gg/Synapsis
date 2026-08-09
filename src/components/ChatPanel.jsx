@@ -1,12 +1,12 @@
 import React, { useState } from "react";
-import { Sparkles, Send, X } from "lucide-react";
+import { Sparkles, Send, X, ArrowLeft } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import "katex/dist/katex.min.css";
 
-export default function ChatPanel({ messages, context, onClearContext, onSend, sending, mobileVisible = true }) {
+export default function ChatPanel({ messages, context, onClearContext, onSend, sending, mobileVisible = true, onBack }) {
   const [text, setText] = useState("");
 
   function submit() {
@@ -21,6 +21,9 @@ export default function ChatPanel({ messages, context, onClearContext, onSend, s
       className={`${mobileVisible ? "flex" : "hidden"} md:flex flex-1 flex-col p-4 sm:p-5 min-w-0 h-full min-h-0`}
     >
       <div className="flex items-center gap-2 mb-5">
+        <button onClick={onBack} aria-label="Volver a notas" className="md:hidden -ml-1 mr-0.5 p-1 text-text-secondary hover:text-accent">
+          <ArrowLeft size={15} />
+        </button>
         <Sparkles size={14} className="text-accent" />
         <span className="text-sm font-medium text-text-primary">Chat con contexto</span>
         {context && (

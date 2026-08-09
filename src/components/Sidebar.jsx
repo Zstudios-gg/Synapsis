@@ -1,15 +1,29 @@
 import React, { useState } from "react";
-import { Sparkles, Plus, Folder, Search, LogOut } from "lucide-react";
+import { Sparkles, Plus, Folder, Search, LogOut, Pencil, Check } from "lucide-react";
 
-export default function Sidebar({ folders, selectedId, onSelect, onCreateFolder, user, onLogout, mobileVisible = true }) {
+export default function Sidebar({ folders, selectedId, onSelect, onCreateFolder, onRenameFolder, user, onLogout, mobileVisible = true }) {
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState("");
+  const [renamingId, setRenamingId] = useState(null);
+  const [renameValue, setRenameValue] = useState("");
 
   function submit() {
     const trimmed = name.trim();
     if (trimmed) onCreateFolder(trimmed);
     setName("");
     setCreating(false);
+  }
+
+  function startRename(folder) {
+    setRenamingId(folder.id);
+    setRenameValue(folder.nombre);
+  }
+
+  function confirmRename() {
+    const trimmed = renameValue.trim();
+    if (trimmed && renamingId) onRenameFolder(renamingId, trimmed);
+    setRenamingId(null);
+    setRenameValue("");
   }
 
   return (
@@ -48,18 +62,46 @@ export default function Sidebar({ folders, selectedId, onSelect, onCreateFolder,
       )}
 
       <div className="flex flex-col gap-0.5 overflow-y-auto flex-1">
-        {folders.map((f) => (
-          <button
-            key={f.id}
-            onClick={() => onSelect(f.id)}
-            className={`flex items-center gap-2 px-2.5 py-2 rounded-lg text-sm text-left transition-colors ${
-              f.id === selectedId ? "bg-accent-soft text-text-primary" : "text-text-secondary hover:bg-card"
-            }`}
-          >
-            <Folder size={14} className={f.id === selectedId ? "text-accent" : "text-text-muted"} />
-            <span className="flex-1 truncate">{f.nombre}</span>
-          </button>
-        ))}
+        {folders.map((f) =>
+          renamingId === f.id ? (
+            <div key={f.id} className="flex items-center gap-2 px-2.5 py-2 rounded-lg bg-card">
+              <Folder size={14} className="text-accent shrink-0" />
+              <input
+                autoFocus
+                value={renameValue}
+                onChange={(e) => setRenameValue(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") confirmRename();
+                  if (e.key === "Escape") setRenamingId(null);
+                }}
+                onBlur={confirmRename}
+                className="flex-1 min-w-0 bg-transparent text-sm text-text-primary outline-none"
+              />
+              <button onMouseDown={(e) => e.preventDefault()} onClick={confirmRename} aria-label="Confirmar nombre">
+                <Check size={13} className="text-accent shrink-0" />
+              </button>
+            </div>
+          ) : (
+            <div
+              key={f.id}
+              className={`group flex items-center gap-2 px-2.5 py-2 rounded-lg text-sm transition-colors ${
+                f.id === selectedId ? "bg-accent-soft text-text-primary" : "text-text-secondary hover:bg-card"
+              }`}
+            >
+              <button onClick={() => onSelect(f.id)} className="flex items-center gap-2 flex-1 min-w-0 text-left">
+                <Folder size={14} className={f.id === selectedId ? "text-accent" : "text-text-muted"} />
+                <span className="flex-1 truncate">{f.nombre}</span>
+              </button>
+              <button
+                onClick={() => startRename(f)}
+                aria-label="Renombrar materia"
+                className="shrink-0 opacity-60 md:opacity-0 md:group-hover:opacity-60 hover:!opacity-100"
+              >
+                <Pencil size={12} className="text-text-muted hover:text-accent" />
+              </button>
+            </div>
+          )
+        )}
         {folders.length === 0 && !creating && (
           <p className="text-xs text-text-muted px-2 py-3">Crea tu primera materia con el +.</p>
         )}

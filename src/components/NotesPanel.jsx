@@ -1,11 +1,11 @@
 import React, { useRef, useState } from "react";
-import { Plus, FileText, Paperclip, Trash2, ChevronRight, Mic, Square, Loader2 } from "lucide-react";
+import { Plus, FileText, Paperclip, Trash2, ChevronRight, Mic, Square, Loader2, ArrowLeft } from "lucide-react";
 
 export default function NotesPanel({
   folderName, notes, attachments, activeNote,
   onCreateNote, onSelectNote, onUpdateNote, onDeleteNote,
   onUploadFile, onUploadAudio, transcribing, transcribeError,
-  onDeleteAttachment, onUseAsContext, mobileVisible = true,
+  onDeleteAttachment, onUseAsContext, mobileVisible = true, onBack,
 }) {
   const fileInputRef = useRef(null);
   const [uploading, setUploading] = useState(false);
@@ -64,6 +64,9 @@ export default function NotesPanel({
     >
       <div className="p-4 border-b border-border">
         <div className="flex items-center gap-1.5 text-text-muted text-xs mb-3">
+          <button onClick={onBack} aria-label="Volver a materias" className="md:hidden -ml-1 mr-0.5 p-1 text-text-secondary hover:text-accent">
+            <ArrowLeft size={15} />
+          </button>
           <span>{folderName || "Selecciona una materia"}</span>
         </div>
         <div className="flex items-center gap-3">

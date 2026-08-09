@@ -19,6 +19,11 @@ export async function createFolder(uid, nombre) {
   return addDoc(ref, { nombre, fechaCreacion: serverTimestamp() });
 }
 
+export async function updateFolder(uid, carpetaId, nombre) {
+  const ref = doc(db, "usuarios", uid, "carpetas", carpetaId);
+  return updateDoc(ref, { nombre });
+}
+
 export async function deleteFolder(uid, carpetaId) {
   return deleteDoc(doc(db, "usuarios", uid, "carpetas", carpetaId));
 }

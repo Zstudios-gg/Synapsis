@@ -6,7 +6,7 @@ import Sidebar from "./components/Sidebar";
 import NotesPanel from "./components/NotesPanel";
 import ChatPanel from "./components/ChatPanel";
 import {
-  watchFolders, createFolder,
+  watchFolders, createFolder, updateFolder,
   watchNotes, createNote, updateNote, deleteNote,
   watchAttachments, registerAttachment, deleteAttachment,
   watchChat, addChatMessage,
@@ -64,6 +64,10 @@ export default function App() {
   async function handleCreateFolder(nombre) {
     const ref = await createFolder(user.uid, nombre);
     setSelectedFolderId(ref.id);
+  }
+
+  function handleRenameFolder(folderId, nombre) {
+    updateFolder(user.uid, folderId, nombre);
   }
 
   async function handleCreateNote() {
@@ -135,6 +139,7 @@ export default function App() {
         selectedId={selectedFolderId}
         onSelect={(id) => { setSelectedFolderId(id); setMobileView("notes"); }}
         onCreateFolder={handleCreateFolder}
+        onRenameFolder={handleRenameFolder}
         user={user}
         onLogout={logout}
         mobileVisible={mobileView === "sidebar"}
@@ -155,6 +160,7 @@ export default function App() {
         onDeleteAttachment={(id) => deleteAttachment(user.uid, selectedFolderId, id)}
         onUseAsContext={(ctx) => { setContext(ctx); setMobileView("chat"); }}
         mobileVisible={mobileView === "notes"}
+        onBack={() => setMobileView("sidebar")}
       />
       <ChatPanel
         messages={messages}
@@ -163,6 +169,7 @@ export default function App() {
         onSend={handleSendMessage}
         sending={sending}
         mobileVisible={mobileView === "chat"}
+        onBack={() => setMobileView("notes")}
       />
 
       {/* Barra de navegación inferior, solo en móvil */}
