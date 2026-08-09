@@ -219,3 +219,82 @@ export async function evaluarRespuestasAbiertas(items) {
   const parsed = extraerJSON(raw);
   return parsed.evaluaciones || [];
 }
+
+const PASOS_PROMPT_SISTEMA =
+  `Eres un profesor explicando un ejercicio paso a paso a un estudiante que está ` +
+  `desesperado por entender el procedimiento, no solo por ver el resultado final.\n\n` +
+  `Responde ÚNICAMENTE con un JSON válido, sin texto adicional, sin markdown. Usa exactamente ` +
+  `uno de estos dos formatos:\n\n` +
+  `1) Si el contenido tiene más de un ejercicio y no es obvio cuál explicar:\n` +
+  `{"tipo":"elegir_ejercicio","opciones":["enunciado corto del ejercicio 1","enunciado corto del ejercicio 2"]}\n\n` +
+  `2) Si ya identificaste el ejercicio a explicar (o el usuario ya eligió uno):\n` +
+  `{"tipo":"pasos","pasos":[{"texto":"explicación breve de este paso en español, puedes usar markdown y $formulas$ inline","geogebra":["comando1","comando2"]}]}\n\n` +
+  `Reglas para el campo "geogebra" de cada paso:\n` +
+  `- Úsalo SOLO si el ejercicio es de funciones, gráficas, geometría o cálculo y el comando aporta algo ` +
+  `visual real (graficar una función, marcar un punto, trazar una derivada, resaltar una intersección, etc).\n` +
+  `- Usa sintaxis nativa de GeoGebra (ej: "f(x)=x^2+3x", "Derivada(f)", "Interseca(f,g)", "A=(2,3)").\n` +
+  `- Si el paso es puramente conceptual, algebraico sin gráfica, o de una materia no gráfica (química, ` +
+  `historia, etc), deja "geogebra" como un arreglo vacío []. No lo fuerces.\n` +
+  `- Los comandos son acumulativos: cada paso agrega sobre lo ya dibujado, no repitas comandos de pasos ` +
+  `anteriores salvo que el paso actual los necesite de nuevo.\n\n` +
+  `Genera entre 3 y 8 pasos. Cada paso enseña UNA idea, no resuelve todo de un salto.`;
+
+/**
+ * Genera una explicación paso a paso (texto + comandos GeoGebra opcionales)
+ * a partir de: un texto libre/nota, un adjunto guardado, o una pregunta
+ * fallida del quiz.
+ *
+ * origen:
+ *   { tipo: "texto", valor }                                         → nota, selección, o ejercicio escrito
+ *   { tipo: "adjunto", adjunto }                                     → objeto de Firestore con urlStorage
+ *   { tipo: "quiz", pregunta, respuestaUsuario, respuestaCorrecta }  → pregunta fallida del quiz
+ *
+ * opcionElegida: cuando el usuario ya eligió uno de los "opciones" que
+ * devolvió una llamada anterior con tipo "elegir_ejercicio".
+ */
+export async function generarPasos(origen, opcionElegida = null) {
+  let parts;
+
+  if (origen.tipo === "texto") {
+    let texto = `${PASOS_PROMPT_SISTEMA}\n\nContenido:\n${origen.valor}`;
+    if (opcionElegida) {
+      texto += `\n\nEl usuario ya eligió explicar este ejercicio: "${opcionElegida}". Genera directamente los pasos (tipo "pasos"), no vuelvas a preguntar.`;
+    }
+    parts = [{ text: texto }];
+  } else if (origen.tipo === "adjunto") {
+    parts = [
+      { text: `${PASOS_PROMPT_SISTEMA}\n\nContenido del adjunto "${origen.adjunto.nombreArchivo}" a continuación:` },
+      await adjuntoAParteGemini(origen.adjunto),
+    ];
+    if (opcionElegida) {
+      parts.push({
+        text: `El usuario ya eligió explicar este ejercicio: "${opcionElegida}". Genera directamente los pasos (tipo "pasos"), no vuelvas a preguntar.`,
+      });
+    }
+  } else if (origen.tipo === "quiz") {
+    const { pregunta, respuestaUsuario, respuestaCorrecta } = origen;
+    parts = [
+      {
+        text:
+          `${PASOS_PROMPT_SISTEMA}\n\nEl estudiante falló esta pregunta de un quiz:\n` +
+          `Pregunta: ${pregunta}\nSu respuesta: ${respuestaUsuario}\nRespuesta correcta: ${respuestaCorrecta}\n\n` +
+          `Explica paso a paso cómo se llega a la respuesta correcta. Genera directamente los pasos (tipo "pasos"), ` +
+          `este caso nunca tiene ambigüedad de "elegir_ejercicio".`,
+      },
+    ];
+  } else {
+    throw new Error("Origen de ejercicio no reconocido.");
+  }
+
+  const contents = [{ role: "user", parts }];
+  const data = await llamarGemini(contents);
+
+  const raw = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!raw) throw new Error("La IA no devolvió una explicación válida.");
+
+  try {
+    return extraerJSON(raw);
+  } catch {
+    throw new Error("La IA devolvió un formato inesperado. Intenta de nuevo.");
+  }
+}
