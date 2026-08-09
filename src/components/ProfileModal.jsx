@@ -63,7 +63,7 @@ export default function ProfileModal({ user, onClose, onLogout }) {
         </button>
 
         <a
-          href="https://github.com/Zstudios-gg/Info-Proyects"
+          href="https://zstudios-gg.github.io/Info-Proyects"
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center justify-center gap-1.5 text-xs text-text-muted hover:text-accent mt-4"
