@@ -79,23 +79,21 @@ export default function App() {
     await registerAttachment(user.uid, selectedFolderId, { nombreArchivo, tipo, urlStorage: url });
   }
 
-  // Sube el audio como adjunto (para poder reescucharlo) Y lo transcribe con
-  // Gemini, creando una nota nueva editable con el texto resultante.
+  // Transcribe el audio con Gemini y crea una nota con el texto resultante.
+  // No se sube el audio a Firebase Storage (requiere plan Blaze); la transcripción
+  // ocurre en memoria y solo se guarda el texto.
   async function handleUploadAudio(file) {
     if (!selectedFolderId) return;
     setTranscribeError(null);
     setTranscribing(true);
     try {
-      const { url, tipo, nombreArchivo } = await uploadFile(user.uid, selectedFolderId, file);
-      await registerAttachment(user.uid, selectedFolderId, { nombreArchivo, tipo, urlStorage: url });
-
       const texto = await transcribirAudio(file);
 
       const fecha = new Date().toLocaleDateString("es-MX", { day: "2-digit", month: "2-digit", year: "numeric" });
       const titulo = `Audio ${fecha}`;
       const ref = await createNote(user.uid, selectedFolderId, titulo);
-      await updateNote(user.uid, selectedFolderId, ref.id, { contenido: texto, audioUrl: url });
-      setActiveNote({ id: ref.id, titulo, contenido: texto, audioUrl: url });
+      await updateNote(user.uid, selectedFolderId, ref.id, { contenido: texto });
+      setActiveNote({ id: ref.id, titulo, contenido: texto });
     } catch (err) {
       console.error("Error transcribiendo audio:", err);
       setTranscribeError("No se pudo transcribir el audio. Intenta de nuevo.");
