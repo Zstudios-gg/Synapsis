@@ -4,6 +4,7 @@ import {
   CheckCircle2, XCircle, RotateCcw, ListChecks,
 } from "lucide-react";
 import { generarQuiz, evaluarRespuestasAbiertas } from "../lib/gemini";
+import StepByStepPanel from "./StepByStepPanel";
 
 const CANTIDADES = [5, 8, 12];
 
@@ -20,6 +21,27 @@ export default function QuizModal({ folderName, notes, attachments, onClose }) {
   const [indice, setIndice] = useState(0);
   const [respuestas, setRespuestas] = useState({}); // { [preguntaId]: valor }
   const [resultados, setResultados] = useState(null); // { total, correctas, detalle: [...] }
+  const [stepsOrigen, setStepsOrigen] = useState(null);
+  const [showSteps, setShowSteps] = useState(false);
+
+  function verPasoAPaso(d) {
+    const respuestaUsuario =
+      d.pregunta.tipo === "opcion_multiple"
+        ? d.pregunta.opciones[d.elegida] ?? "(sin responder)"
+        : d.respuestaUsuario || "(sin responder)";
+    const respuestaCorrecta =
+      d.pregunta.tipo === "opcion_multiple"
+        ? d.pregunta.opciones[d.pregunta.respuestaCorrecta]
+        : d.pregunta.respuestaModelo;
+
+    setStepsOrigen({
+      tipo: "quiz",
+      pregunta: d.pregunta.pregunta,
+      respuestaUsuario,
+      respuestaCorrecta,
+    });
+    setShowSteps(true);
+  }
 
   const seleccionVacia = notasSeleccionadas.size === 0 && adjuntosSeleccionados.size === 0;
 
@@ -343,6 +365,15 @@ export default function QuizModal({ folderName, notes, attachments, onClose }) {
                       <p className="text-text-muted italic">{d.feedback}</p>
                     </div>
                   )}
+
+                  {!d.ok && (
+                    <button
+                      onClick={() => verPasoAPaso(d)}
+                      className="mt-2 ml-6 text-xs text-accent hover:text-text-primary"
+                    >
+                      Ver paso a paso →
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
@@ -357,6 +388,8 @@ export default function QuizModal({ folderName, notes, attachments, onClose }) {
           </div>
         )}
       </div>
+
+      {showSteps && <StepByStepPanel origen={stepsOrigen} onClose={() => setShowSteps(false)} />}
     </div>
   );
 }

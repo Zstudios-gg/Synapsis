@@ -1,6 +1,7 @@
 import React, { useRef, useState } from "react";
-import { Plus, FileText, Paperclip, Trash2, ChevronRight, Mic, Square, Loader2, ArrowLeft, Sparkles } from "lucide-react";
+import { Plus, FileText, Paperclip, Trash2, ChevronRight, Mic, Square, Loader2, ArrowLeft, Sparkles, Lightbulb } from "lucide-react";
 import QuizModal from "./QuizModal";
+import StepByStepPanel from "./StepByStepPanel";
 
 export default function NotesPanel({
   folderName, notes, attachments, activeNote,
@@ -14,6 +15,13 @@ export default function NotesPanel({
   const mediaRecorderRef = useRef(null);
   const chunksRef = useRef([]);
   const [showQuiz, setShowQuiz] = useState(false);
+  const [showSteps, setShowSteps] = useState(false);
+  const [stepsOrigen, setStepsOrigen] = useState(null);
+
+  function abrirPasoAPaso(origen = null) {
+    setStepsOrigen(origen);
+    setShowSteps(true);
+  }
 
   async function handleFileChange(e) {
     const file = e.target.files[0];
@@ -96,6 +104,13 @@ export default function NotesPanel({
           >
             <Sparkles size={13} /> Quiz
           </button>
+          <button
+            onClick={() => abrirPasoAPaso(null)}
+            disabled={!folderName}
+            className="flex items-center gap-1.5 text-xs text-accent hover:text-text-primary disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <Lightbulb size={13} /> Explicar ejercicio
+          </button>
         </div>
         {transcribing && (
           <p className="mt-2 flex items-center gap-1.5 text-xs text-text-muted">
@@ -141,12 +156,21 @@ export default function NotesPanel({
             placeholder="Escribe aquí..."
             className="flex-1 bg-card border border-border rounded-lg p-2.5 text-sm text-text-secondary placeholder-text-muted outline-none resize-none focus:border-accent-soft"
           />
-          <button
-            onClick={() => onUseAsContext({ tipo: "nota", texto: activeNote.contenido, nombre: activeNote.titulo })}
-            className="mt-2 text-xs text-accent hover:text-text-primary text-left"
-          >
-            Usar esta nota como contexto en el chat →
-          </button>
+          <div className="mt-2 flex items-center gap-3">
+            <button
+              onClick={() => onUseAsContext({ tipo: "nota", texto: activeNote.contenido, nombre: activeNote.titulo })}
+              className="text-xs text-accent hover:text-text-primary text-left"
+            >
+              Usar esta nota como contexto en el chat →
+            </button>
+            <button
+              onClick={() => abrirPasoAPaso({ tipo: "texto", valor: activeNote.contenido })}
+              disabled={!activeNote.contenido?.trim()}
+              className="text-xs text-accent hover:text-text-primary text-left disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Explicar paso a paso →
+            </button>
+          </div>
         </div>
       )}
 
@@ -170,6 +194,12 @@ export default function NotesPanel({
               >
                 usar
               </button>
+              <button
+                onClick={() => abrirPasoAPaso({ tipo: "adjunto", adjunto: a })}
+                className="text-[10px] text-accent hover:text-text-primary shrink-0"
+              >
+                paso a paso
+              </button>
               <button onClick={() => onDeleteAttachment(a.id)} aria-label="Eliminar adjunto">
                 <Trash2 size={11} className="text-text-muted hover:text-danger shrink-0" />
               </button>
@@ -187,6 +217,8 @@ export default function NotesPanel({
           onClose={() => setShowQuiz(false)}
         />
       )}
+
+      {showSteps && <StepByStepPanel origen={stepsOrigen} onClose={() => setShowSteps(false)} />}
     </div>
   );
 }
