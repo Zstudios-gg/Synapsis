@@ -2,6 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --accent-soft: #453770;
+  --accent: #8B7FD4;
+  --accent-strong: #5A4A94;
+}
+
 body {
   background-color: #100B1C;
   color: #EDEAF8;

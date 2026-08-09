@@ -1,11 +1,13 @@
 import React, { useState } from "react";
 import { Sparkles, Plus, Folder, Search, LogOut, Pencil, Check } from "lucide-react";
+import ProfileModal from "./ProfileModal";
 
 export default function Sidebar({ folders, selectedId, onSelect, onCreateFolder, onRenameFolder, user, onLogout, mobileVisible = true }) {
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState("");
   const [renamingId, setRenamingId] = useState(null);
   const [renameValue, setRenameValue] = useState("");
+  const [showProfile, setShowProfile] = useState(false);
 
   function submit() {
     const trimmed = name.trim();
@@ -109,14 +111,23 @@ export default function Sidebar({ folders, selectedId, onSelect, onCreateFolder,
 
       {user && (
         <div className="flex items-center gap-2 pt-3 mt-3 border-t border-border">
-          {user.photoURL && (
-            <img src={user.photoURL} alt="" className="w-6 h-6 rounded-full" referrerPolicy="no-referrer" />
-          )}
-          <span className="text-xs text-text-secondary truncate flex-1">{user.displayName}</span>
+          <button
+            onClick={() => setShowProfile(true)}
+            className="flex items-center gap-2 flex-1 min-w-0 text-left rounded-lg hover:bg-card p-1 -m-1 transition-colors"
+          >
+            {user.photoURL && (
+              <img src={user.photoURL} alt="" className="w-6 h-6 rounded-full shrink-0" referrerPolicy="no-referrer" />
+            )}
+            <span className="text-xs text-text-secondary truncate flex-1">{user.displayName}</span>
+          </button>
           <button onClick={onLogout} aria-label="Cerrar sesión">
             <LogOut size={13} className="text-text-muted hover:text-danger" />
           </button>
         </div>
+      )}
+
+      {showProfile && (
+        <ProfileModal user={user} onClose={() => setShowProfile(false)} onLogout={onLogout} />
       )}
     </div>
   );
