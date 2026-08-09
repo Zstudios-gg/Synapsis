@@ -15,6 +15,7 @@ export default {
         "text-secondary": "#B7AFCB",
         "text-muted": "#756A94",
         danger: "#D46A6A",
+        success: "#6FCF97",
       },
     },
   },
