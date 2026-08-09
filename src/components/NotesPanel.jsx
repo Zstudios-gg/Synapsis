@@ -1,24 +1,61 @@
 import React, { useRef, useState } from "react";
-import { Plus, FileText, Paperclip, Trash2, ChevronRight } from "lucide-react";
+import { Plus, FileText, Paperclip, Trash2, ChevronRight, Mic, Square, Loader2 } from "lucide-react";
 
 export default function NotesPanel({
   folderName, notes, attachments, activeNote,
   onCreateNote, onSelectNote, onUpdateNote, onDeleteNote,
-  onUploadFile, onDeleteAttachment, onUseAsContext,
+  onUploadFile, onUploadAudio, transcribing, transcribeError,
+  onDeleteAttachment, onUseAsContext,
 }) {
   const fileInputRef = useRef(null);
   const [uploading, setUploading] = useState(false);
+  const [recording, setRecording] = useState(false);
+  const mediaRecorderRef = useRef(null);
+  const chunksRef = useRef([]);
 
   async function handleFileChange(e) {
     const file = e.target.files[0];
     if (!file) return;
+    const esAudio = file.type.startsWith("audio/");
     setUploading(true);
     try {
-      await onUploadFile(file);
+      if (esAudio) {
+        await onUploadAudio(file);
+      } else {
+        await onUploadFile(file);
+      }
     } finally {
       setUploading(false);
       e.target.value = "";
     }
+  }
+
+  async function startRecording() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      chunksRef.current = [];
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunksRef.current.push(e.data);
+      };
+      recorder.onstop = async () => {
+        stream.getTracks().forEach((t) => t.stop());
+        const blob = new Blob(chunksRef.current, { type: "audio/webm" });
+        const file = new File([blob], `grabacion-${Date.now()}.webm`, { type: "audio/webm" });
+        await onUploadAudio(file);
+      };
+      mediaRecorderRef.current = recorder;
+      recorder.start();
+      setRecording(true);
+    } catch (err) {
+      console.error("No se pudo acceder al micrófono:", err);
+      alert("No se pudo acceder al micrófono. Revisa los permisos del navegador.");
+    }
+  }
+
+  function stopRecording() {
+    mediaRecorderRef.current?.stop();
+    setRecording(false);
   }
 
   return (
@@ -27,13 +64,33 @@ export default function NotesPanel({
         <div className="flex items-center gap-1.5 text-text-muted text-xs mb-3">
           <span>{folderName || "Selecciona una materia"}</span>
         </div>
-        <button
-          onClick={onCreateNote}
-          disabled={!folderName}
-          className="flex items-center gap-1.5 text-xs text-accent hover:text-text-primary disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          <Plus size={13} /> Nueva nota
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={onCreateNote}
+            disabled={!folderName}
+            className="flex items-center gap-1.5 text-xs text-accent hover:text-text-primary disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <Plus size={13} /> Nueva nota
+          </button>
+          <button
+            onClick={recording ? stopRecording : startRecording}
+            disabled={!folderName || transcribing}
+            className={`flex items-center gap-1.5 text-xs disabled:opacity-40 disabled:cursor-not-allowed ${
+              recording ? "text-danger hover:text-danger" : "text-accent hover:text-text-primary"
+            }`}
+          >
+            {recording ? <Square size={13} /> : <Mic size={13} />}
+            {recording ? "Detener" : "Grabar audio"}
+          </button>
+        </div>
+        {transcribing && (
+          <p className="mt-2 flex items-center gap-1.5 text-xs text-text-muted">
+            <Loader2 size={12} className="animate-spin" /> Transcribiendo audio...
+          </p>
+        )}
+        {transcribeError && (
+          <p className="mt-2 text-xs text-danger">{transcribeError}</p>
+        )}
       </div>
 
       <div className="flex-1 overflow-y-auto">
@@ -64,6 +121,9 @@ export default function NotesPanel({
               <Trash2 size={13} className="text-text-muted hover:text-danger" />
             </button>
           </div>
+          {activeNote.audioUrl && (
+            <audio controls src={activeNote.audioUrl} className="w-full mb-2 h-8" />
+          )}
           <textarea
             value={activeNote.contenido}
             onChange={(e) => onUpdateNote(activeNote.id, { contenido: e.target.value })}
