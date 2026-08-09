@@ -35,7 +35,7 @@ export default function LoginScreen({ onLogin }) {
       </button>
 
       <a
-        href="https://zstudios-gg.github.io/Info-Proyects/"
+        href="https://zstudios-gg.github.io/Info-Proyects"
         target="_blank"
         rel="noopener noreferrer"
         className="flex items-center gap-1.5 text-xs text-text-muted hover:text-accent absolute bottom-6"
