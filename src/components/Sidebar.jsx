@@ -28,7 +28,7 @@ export default function Sidebar({ folders, selectedId, onSelect, onCreateFolder,
 
   return (
     <div
-      className={`${mobileVisible ? "flex" : "hidden"} md:flex w-full md:w-56 h-full min-h-0 bg-surface border-r border-border flex-col p-4 shrink-0 overflow-hidden`}
+      className={`${mobileVisible ? "flex" : "hidden"} md:flex w-full md:w-56 h-full min-h-0 bg-surface border-r border-border flex-col p-4 md:shrink-0 overflow-hidden`}
     >
       <div className="flex items-center gap-2 mb-6 px-1">
         <div className="w-[26px] h-[26px] rounded-md bg-accent-soft flex items-center justify-center">

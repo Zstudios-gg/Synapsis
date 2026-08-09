@@ -1,9 +1,11 @@
-import React from "react";
-import { Sparkles } from "lucide-react";
+import React, { useState } from "react";
+import { Sparkles, Info, X, ShieldCheck, ExternalLink } from "lucide-react";
 
 export default function LoginScreen({ onLogin }) {
+  const [showInfo, setShowInfo] = useState(false);
+
   return (
-    <div className="min-h-screen bg-bg flex flex-col items-center justify-center px-6">
+    <div className="min-h-screen bg-bg flex flex-col items-center justify-center px-6 relative">
       <div className="w-10 h-10 rounded-xl bg-accent-soft flex items-center justify-center mb-4">
         <Sparkles size={20} className="text-accent" />
       </div>
@@ -23,6 +25,68 @@ export default function LoginScreen({ onLogin }) {
         </svg>
         Continuar con Google
       </button>
+
+      <button
+        onClick={() => setShowInfo(true)}
+        className="flex items-center gap-1.5 text-xs text-text-muted hover:text-accent mt-4"
+      >
+        <Info size={13} />
+        ¿Cómo funciona el inicio de sesión?
+      </button>
+
+      <a
+        href="https://github.com/Zstudios-gg/Info-Proyects"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex items-center gap-1.5 text-xs text-text-muted hover:text-accent absolute bottom-6"
+      >
+        Un proyecto de ZStudios
+        <ExternalLink size={11} />
+      </a>
+
+      {showInfo && (
+        <div
+          className="fixed inset-0 bg-black/60 flex items-center justify-center px-6 z-50"
+          onClick={() => setShowInfo(false)}
+        >
+          <div
+            className="bg-surface border border-border rounded-2xl p-6 max-w-sm w-full"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <ShieldCheck size={16} className="text-accent" />
+                <span className="text-sm font-medium text-text-primary">Inicio de sesión seguro</span>
+              </div>
+              <button onClick={() => setShowInfo(false)} aria-label="Cerrar">
+                <X size={16} className="text-text-muted hover:text-text-primary" />
+              </button>
+            </div>
+            <div className="space-y-3 text-sm text-text-secondary leading-relaxed">
+              <p>
+                Synapsis usa <span className="text-text-primary font-medium">Firebase Authentication</span>,
+                el servicio oficial de Google para iniciar sesión de forma segura. Nunca vemos ni guardamos tu
+                contraseña de Google.
+              </p>
+              <p>
+                Solo se solicita tu nombre, correo y foto de perfil para identificar tu cuenta. Tus notas y
+                adjuntos se guardan en tu propia base de datos privada (Firestore), separada de cualquier
+                otro usuario.
+              </p>
+              <p>
+                Puedes revocar el acceso cuando quieras desde tu cuenta de Google, en{" "}
+                <span className="text-text-primary">myaccount.google.com/permissions</span>.
+              </p>
+            </div>
+            <button
+              onClick={() => setShowInfo(false)}
+              className="mt-5 w-full bg-accent-strong text-text-primary text-sm font-medium py-2 rounded-xl hover:opacity-90 transition-opacity"
+            >
+              Entendido
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
