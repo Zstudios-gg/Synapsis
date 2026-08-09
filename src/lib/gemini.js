@@ -69,11 +69,14 @@ export async function transcribirAudio(file) {
   return texto.trim();
 }
 
-async function llamarGemini(contents) {
+async function llamarGemini(contents, generationConfig) {
+  const body = { contents };
+  if (generationConfig) body.generationConfig = generationConfig;
+
   const res = await fetch(URL, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ contents }),
+    body: JSON.stringify(body),
   });
 
   if (!res.ok) {
@@ -96,4 +99,123 @@ function fileToBase64(file) {
     reader.onerror = reject;
     reader.readAsDataURL(file);
   });
+}
+
+// Descarga un adjunto ya subido a Firebase Storage y lo prepara como "parte"
+// de contenido multimodal para Gemini (funciona igual para imágenes y PDFs).
+async function adjuntoAParteGemini(adjunto) {
+  const res = await fetch(adjunto.urlStorage);
+  if (!res.ok) throw new Error(`No se pudo descargar el adjunto "${adjunto.nombreArchivo}".`);
+  const blob = await res.blob();
+  const base64 = await fileToBase64(blob);
+  const mimeType = blob.type || (adjunto.tipo === "pdf" ? "application/pdf" : "image/jpeg");
+  return { inline_data: { mime_type: mimeType, data: base64 } };
+}
+
+// Extrae el primer bloque JSON válido de un texto, aunque venga envuelto en
+// ```json ... ``` o con texto extra alrededor (algunos modelos lo hacen pese
+// a que se les pida JSON puro).
+function extraerJSON(texto) {
+  const limpio = texto.replace(/```json|```/g, "").trim();
+  const inicio = limpio.indexOf("{");
+  const fin = limpio.lastIndexOf("}");
+  if (inicio === -1 || fin === -1) throw new Error("La IA no devolvió un JSON reconocible.");
+  return JSON.parse(limpio.slice(inicio, fin + 1));
+}
+
+// Genera un quiz mixto (opción múltiple + abiertas) a partir de notas de texto
+// y/o adjuntos (imágenes, PDFs) que el usuario seleccionó.
+export async function generarQuiz({ notas = [], adjuntos = [], cantidad = 8 }) {
+  if (notas.length === 0 && adjuntos.length === 0) {
+    throw new Error("Selecciona al menos una nota o adjunto para generar el quiz.");
+  }
+
+  const partes = [
+    {
+      text:
+        `Eres un profesor creando un quiz de estudio en español a partir del siguiente material. ` +
+        `Genera exactamente ${cantidad} preguntas, mezclando preguntas de opción múltiple (4 opciones, una sola correcta) ` +
+        `y preguntas abiertas (de desarrollo corto). Procura un balance razonable entre ambos tipos. ` +
+        `Las preguntas deben cubrir los conceptos más importantes del material, variar en dificultad, y no ser triviales ` +
+        `ni repetitivas entre sí. Para las de opción múltiple, las 3 opciones incorrectas deben ser creíbles (no absurdas obvias). ` +
+        `Para las abiertas, incluye una "respuestaModelo" breve (2-4 líneas) que sirva como referencia para calificar.\n\n` +
+        `Responde ÚNICAMENTE con un JSON con esta forma exacta, sin texto adicional, sin explicaciones, sin markdown:\n` +
+        `{"preguntas":[{"tipo":"opcion_multiple","pregunta":"...","tema":"...","opciones":["...","...","...","..."],"respuestaCorrecta":0},` +
+        `{"tipo":"abierta","pregunta":"...","tema":"...","respuestaModelo":"..."}]}\n\n` +
+        `Material:`,
+    },
+  ];
+
+  for (const n of notas) {
+    partes.push({ text: `\n--- Nota: "${n.titulo}" ---\n${n.contenido || "(sin contenido)"}` });
+  }
+
+  for (const a of adjuntos) {
+    partes.push({ text: `\n--- Adjunto: "${a.nombreArchivo}" ---` });
+    partes.push(await adjuntoAParteGemini(a));
+  }
+
+  const contents = [{ role: "user", parts: partes }];
+  const data = await llamarGemini(contents);
+
+  const raw = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!raw) throw new Error("La IA no devolvió un quiz válido.");
+
+  let parsed;
+  try {
+    parsed = extraerJSON(raw);
+  } catch {
+    throw new Error("La IA devolvió un formato inesperado. Intenta generar el quiz de nuevo.");
+  }
+
+  const preguntas = (parsed.preguntas || [])
+    .filter((p) => p.tipo === "opcion_multiple" ? Array.isArray(p.opciones) && p.opciones.length >= 2 : true)
+    .map((p, i) => ({ id: `q${i}`, ...p }));
+
+  if (preguntas.length === 0) throw new Error("La IA no generó preguntas utilizables. Intenta de nuevo.");
+  return preguntas;
+}
+
+const EVAL_PROMPT_FORMATO =
+  `Responde ÚNICAMENTE con un JSON con esta forma exacta, sin texto adicional, sin markdown:\n` +
+  `{"evaluaciones":[{"puntaje":85,"correcta":true,"feedback":"..."}]}`;
+
+// Evalúa en batch las respuestas abiertas del usuario contra la respuesta
+// modelo de cada pregunta. Devuelve un array alineado por índice con `items`.
+export async function evaluarRespuestasAbiertas(items) {
+  if (items.length === 0) return [];
+
+  const listado = items
+    .map(
+      (it, i) =>
+        `${i + 1}. Pregunta: ${it.pregunta}\nRespuesta modelo: ${it.respuestaModelo}\nRespuesta del estudiante: ${
+          it.respuestaUsuario?.trim() || "(sin responder)"
+        }`
+    )
+    .join("\n\n");
+
+  const contents = [
+    {
+      role: "user",
+      parts: [
+        {
+          text:
+            `Eres un profesor calificando respuestas de un quiz de estudio. Para cada una de las siguientes ` +
+            `${items.length} preguntas, compara la respuesta del estudiante contra la respuesta modelo y da un puntaje ` +
+            `de 0 a 100 (sé razonable: no exijas texto idéntico, evalúa si la idea central está correcta), más un ` +
+            `feedback breve y constructivo en español (1-2 líneas). "correcta" debe ser true si el puntaje es >= 60. ` +
+            `Si no respondió, el puntaje es 0. Devuelve las evaluaciones EN EL MISMO ORDEN que las preguntas.\n\n` +
+            `${EVAL_PROMPT_FORMATO}\n\nPreguntas:\n${listado}`,
+        },
+      ],
+    },
+  ];
+
+  const data = await llamarGemini(contents);
+
+  const raw = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!raw) throw new Error("No se pudieron evaluar las respuestas.");
+
+  const parsed = extraerJSON(raw);
+  return parsed.evaluaciones || [];
 }

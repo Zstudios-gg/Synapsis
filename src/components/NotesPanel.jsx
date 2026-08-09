@@ -1,5 +1,6 @@
 import React, { useRef, useState } from "react";
-import { Plus, FileText, Paperclip, Trash2, ChevronRight, Mic, Square, Loader2, ArrowLeft } from "lucide-react";
+import { Plus, FileText, Paperclip, Trash2, ChevronRight, Mic, Square, Loader2, ArrowLeft, Sparkles } from "lucide-react";
+import QuizModal from "./QuizModal";
 
 export default function NotesPanel({
   folderName, notes, attachments, activeNote,
@@ -12,6 +13,7 @@ export default function NotesPanel({
   const [recording, setRecording] = useState(false);
   const mediaRecorderRef = useRef(null);
   const chunksRef = useRef([]);
+  const [showQuiz, setShowQuiz] = useState(false);
 
   async function handleFileChange(e) {
     const file = e.target.files[0];
@@ -69,7 +71,7 @@ export default function NotesPanel({
           </button>
           <span>{folderName || "Selecciona una materia"}</span>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
           <button
             onClick={onCreateNote}
             disabled={!folderName}
@@ -86,6 +88,13 @@ export default function NotesPanel({
           >
             {recording ? <Square size={13} /> : <Mic size={13} />}
             {recording ? "Detener" : "Grabar audio"}
+          </button>
+          <button
+            onClick={() => setShowQuiz(true)}
+            disabled={!folderName || (notes.length === 0 && attachments.length === 0)}
+            className="flex items-center gap-1.5 text-xs text-accent hover:text-text-primary disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <Sparkles size={13} /> Quiz
           </button>
         </div>
         {transcribing && (
@@ -169,6 +178,15 @@ export default function NotesPanel({
           {attachments.length === 0 && <p className="text-xs text-text-muted">Sin adjuntos aún.</p>}
         </div>
       </div>
+
+      {showQuiz && (
+        <QuizModal
+          folderName={folderName}
+          notes={notes}
+          attachments={attachments}
+          onClose={() => setShowQuiz(false)}
+        />
+      )}
     </div>
   );
 }
