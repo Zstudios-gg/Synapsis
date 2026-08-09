@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { Folder, FileText, Sparkles } from "lucide-react";
 import { useAuth } from "./hooks/useAuth";
 import LoginScreen from "./components/LoginScreen";
 import Sidebar from "./components/Sidebar";
@@ -26,6 +27,8 @@ export default function App() {
   const [sending, setSending] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
   const [transcribeError, setTranscribeError] = useState(null);
+  // Controla qué panel se ve en pantallas de móvil (< md). En desktop los 3 se ven a la vez.
+  const [mobileView, setMobileView] = useState("sidebar"); // "sidebar" | "notes" | "chat"
 
   // Carpetas del usuario
   useEffect(() => {
@@ -126,14 +129,15 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-bg flex text-text-primary">
+    <div className="h-[100dvh] bg-bg flex flex-col md:flex-row text-text-primary overflow-hidden">
       <Sidebar
         folders={folders}
         selectedId={selectedFolderId}
-        onSelect={setSelectedFolderId}
+        onSelect={(id) => { setSelectedFolderId(id); setMobileView("notes"); }}
         onCreateFolder={handleCreateFolder}
         user={user}
         onLogout={logout}
+        mobileVisible={mobileView === "sidebar"}
       />
       <NotesPanel
         folderName={selectedFolder?.nombre}
@@ -149,7 +153,8 @@ export default function App() {
         transcribing={transcribing}
         transcribeError={transcribeError}
         onDeleteAttachment={(id) => deleteAttachment(user.uid, selectedFolderId, id)}
-        onUseAsContext={setContext}
+        onUseAsContext={(ctx) => { setContext(ctx); setMobileView("chat"); }}
+        mobileVisible={mobileView === "notes"}
       />
       <ChatPanel
         messages={messages}
@@ -157,7 +162,41 @@ export default function App() {
         onClearContext={() => setContext(null)}
         onSend={handleSendMessage}
         sending={sending}
+        mobileVisible={mobileView === "chat"}
       />
+
+      {/* Barra de navegación inferior, solo en móvil */}
+      <div className="md:hidden flex items-center justify-around border-t border-border bg-surface shrink-0 py-2">
+        <button
+          onClick={() => setMobileView("sidebar")}
+          className={`flex flex-col items-center gap-1 px-4 py-1 text-[11px] ${
+            mobileView === "sidebar" ? "text-accent" : "text-text-muted"
+          }`}
+        >
+          <Folder size={18} />
+          Materias
+        </button>
+        <button
+          onClick={() => setMobileView("notes")}
+          disabled={!selectedFolderId}
+          className={`flex flex-col items-center gap-1 px-4 py-1 text-[11px] disabled:opacity-40 ${
+            mobileView === "notes" ? "text-accent" : "text-text-muted"
+          }`}
+        >
+          <FileText size={18} />
+          Notas
+        </button>
+        <button
+          onClick={() => setMobileView("chat")}
+          disabled={!selectedFolderId}
+          className={`flex flex-col items-center gap-1 px-4 py-1 text-[11px] disabled:opacity-40 ${
+            mobileView === "chat" ? "text-accent" : "text-text-muted"
+          }`}
+        >
+          <Sparkles size={18} />
+          Chat
+        </button>
+      </div>
     </div>
   );
 }

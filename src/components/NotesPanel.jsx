@@ -5,7 +5,7 @@ export default function NotesPanel({
   folderName, notes, attachments, activeNote,
   onCreateNote, onSelectNote, onUpdateNote, onDeleteNote,
   onUploadFile, onUploadAudio, transcribing, transcribeError,
-  onDeleteAttachment, onUseAsContext,
+  onDeleteAttachment, onUseAsContext, mobileVisible = true,
 }) {
   const fileInputRef = useRef(null);
   const [uploading, setUploading] = useState(false);
@@ -59,7 +59,9 @@ export default function NotesPanel({
   }
 
   return (
-    <div className="w-[340px] border-r border-border flex flex-col shrink-0">
+    <div
+      className={`${mobileVisible ? "flex" : "hidden"} md:flex w-full md:w-[340px] h-full min-h-0 border-r border-border flex-col shrink-0 overflow-hidden`}
+    >
       <div className="p-4 border-b border-border">
         <div className="flex items-center gap-1.5 text-text-muted text-xs mb-3">
           <span>{folderName || "Selecciona una materia"}</span>
