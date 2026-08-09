@@ -85,3 +85,52 @@ export async function addChatMessage(uid, carpetaId, { remitente, texto, context
   const ref = collection(db, "usuarios", uid, "carpetas", carpetaId, "chat");
   return addDoc(ref, { remitente, texto, contextoAnclado, fecha: serverTimestamp() });
 }
+
+// ---------- Quizzes (historial de resultados — Sección 10.1) ----------
+// Se guarda automáticamente al terminar un quiz (sin botón), tal como quedó
+// planteado en el documento de diseño para no bloquear el resto del roadmap.
+
+export function watchQuizHistory(uid, carpetaId, callback) {
+  const ref = collection(db, "usuarios", uid, "carpetas", carpetaId, "quizzes");
+  const q = query(ref, orderBy("fecha", "desc"));
+  return onSnapshot(q, (snap) => {
+    callback(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+  });
+}
+
+export async function saveQuizResult(uid, carpetaId, { total, correctas, detalle }) {
+  const ref = collection(db, "usuarios", uid, "carpetas", carpetaId, "quizzes");
+  return addDoc(ref, {
+    cantidadPreguntas: total,
+    correctas,
+    puntajeTotal: total > 0 ? Math.round((correctas / total) * 100) : 0,
+    detalle,
+    fecha: serverTimestamp(),
+  });
+}
+
+export async function deleteQuizResult(uid, carpetaId, quizId) {
+  return deleteDoc(doc(db, "usuarios", uid, "carpetas", carpetaId, "quizzes", quizId));
+}
+
+// ---------- Paso a paso (historial — extensión de la Sección 10.3) ----------
+// A diferencia del quiz, el guardado es explícito (botón "Guardar"): un
+// paso a paso se genera muy seguido para exploración puntual y no todos
+// vale la pena conservarlos.
+
+export function watchPasosHistory(uid, carpetaId, callback) {
+  const ref = collection(db, "usuarios", uid, "carpetas", carpetaId, "pasosAPaso");
+  const q = query(ref, orderBy("fecha", "desc"));
+  return onSnapshot(q, (snap) => {
+    callback(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+  });
+}
+
+export async function savePasoAPaso(uid, carpetaId, { resumen, pasos }) {
+  const ref = collection(db, "usuarios", uid, "carpetas", carpetaId, "pasosAPaso");
+  return addDoc(ref, { resumen, pasos, fecha: serverTimestamp() });
+}
+
+export async function deletePasoAPaso(uid, carpetaId, pasoId) {
+  return deleteDoc(doc(db, "usuarios", uid, "carpetas", carpetaId, "pasosAPaso", pasoId));
+}
