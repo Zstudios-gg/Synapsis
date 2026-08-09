@@ -48,6 +48,12 @@ export async function transcribirAudio(file) {
           text:
             "Transcribe este audio a texto en español lo más fielmente posible. " +
             "Si es una clase o apunte hablado, conserva la estructura en párrafos. " +
+            "MUY IMPORTANTE: transcribe únicamente lo que puedas escuchar con claridad. " +
+            "Si una parte del audio es inaudible, tiene demasiado ruido, o el silencio/ruido es " +
+            "predominante, escribe [inaudible] en ese tramo en vez de inventar o adivinar palabras. " +
+            "Si el audio completo no tiene voz humana entendible, responde únicamente: " +
+            "\"[No se detectó voz clara en este audio]\". " +
+            "Nunca inventes contenido que no esté realmente en el audio. " +
             "Responde ÚNICAMENTE con la transcripción, sin comentarios, encabezados ni explicaciones adicionales.",
         },
         { inline_data: { mime_type: file.type || "audio/webm", data: base64 } },
