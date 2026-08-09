@@ -238,8 +238,18 @@ const PASOS_PROMPT_SISTEMA =
   `- NUNCA reutilices como nombre de un número o punto una letra que ya usaste como variable ligada ` +
   `de una función (ej: si definiste f(x)=..., no hagas luego "x=5" para un punto crítico; usa "x_1=5" ` +
   `o "P=(5, f(5))" en su lugar). Lo mismo aplica a nombres reservados como e, i, pi.\n` +
-  `- Prefiere comandos que devuelven objetos con nombre propio (ej: "Extremo(f)", "Raiz(f)", ` +
-  `"Interseca(f,g)") en vez de escribir a mano una redefinición de una variable que ya existe.\n` +
+  `- Prefiere comandos que devuelven objetos con nombre propio (ej: "Raiz(f)", "Interseca(f,g)") en ` +
+  `vez de escribir a mano una redefinición de una variable que ya existe.\n` +
+  `- REGLA CLAVE para ejercicios de optimización (o cualquier función que dependa de una restricción ` +
+  `que elimina una variable): antes de derivar, el comando debe redefinir la función objetivo YA ` +
+  `sustituida en UNA sola variable (ej: si el volumen depende de r y h pero h se despeja de una ` +
+  `restricción, el comando debe ser algo como "V(r) = <expresión con r únicamente, sin h>", no dejar ` +
+  `V con dos variables). Nunca uses Derivada sobre una función con más de una variable libre.\n` +
+  `- Al derivar, indica siempre la variable explícita: "dV(r) = Derivada(V, r)", no "Derivada(V)".\n` +
+  `- Para encontrar el punto crítico/óptimo NO uses "Extremo(...)" (solo funciona bien con funciones ` +
+  `polinómicas y sin intervalo suele fallar en funciones racionales, típicas de optimización). Usa en ` +
+  `su lugar "Raiz(dV, <valor_min>, <valor_max>)" dando un intervalo razonable del dominio físico del ` +
+  `problema (ej: valores positivos, hasta un límite lógico según el enunciado).\n` +
   `- Si el paso es puramente conceptual, algebraico sin gráfica, o de una materia no gráfica (química, ` +
   `historia, etc), deja "geogebra" como un arreglo vacío []. No lo fuerces.\n` +
   `- Los comandos son acumulativos: cada paso agrega sobre lo ya dibujado, no repitas comandos de pasos ` +
