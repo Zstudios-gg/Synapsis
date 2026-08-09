@@ -233,6 +233,13 @@ const PASOS_PROMPT_SISTEMA =
   `- Úsalo SOLO si el ejercicio es de funciones, gráficas, geometría o cálculo y el comando aporta algo ` +
   `visual real (graficar una función, marcar un punto, trazar una derivada, resaltar una intersección, etc).\n` +
   `- Usa sintaxis nativa de GeoGebra (ej: "f(x)=x^2+3x", "Derivada(f)", "Interseca(f,g)", "A=(2,3)").\n` +
+  `- Usa SIEMPRE comillas rectas ' (nunca ' o ' tipográficas) y evita el símbolo ° o cualquier ` +
+  `carácter no ASCII dentro de los comandos.\n` +
+  `- NUNCA reutilices como nombre de un número o punto una letra que ya usaste como variable ligada ` +
+  `de una función (ej: si definiste f(x)=..., no hagas luego "x=5" para un punto crítico; usa "x_1=5" ` +
+  `o "P=(5, f(5))" en su lugar). Lo mismo aplica a nombres reservados como e, i, pi.\n` +
+  `- Prefiere comandos que devuelven objetos con nombre propio (ej: "Extremo(f)", "Raiz(f)", ` +
+  `"Interseca(f,g)") en vez de escribir a mano una redefinición de una variable que ya existe.\n` +
   `- Si el paso es puramente conceptual, algebraico sin gráfica, o de una materia no gráfica (química, ` +
   `historia, etc), deja "geogebra" como un arreglo vacío []. No lo fuerces.\n` +
   `- Los comandos son acumulativos: cada paso agrega sobre lo ya dibujado, no repitas comandos de pasos ` +
