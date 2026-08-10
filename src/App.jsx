@@ -145,6 +145,8 @@ export default function App() {
         mobileVisible={mobileView === "sidebar"}
       />
       <NotesPanel
+        uid={user.uid}
+        carpetaId={selectedFolderId}
         folderName={selectedFolder?.nombre}
         notes={notes}
         attachments={attachments}
