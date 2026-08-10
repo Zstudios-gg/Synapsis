@@ -7,7 +7,14 @@
 // que solo funcione desde tu dominio (HTTP referrer: https://zstudios-gg.github.io/*).
 
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
-const MODEL = "gemini-3.6-flash";
+// gemini-3.6-flash es el modelo más nuevo de Google (jul 2026) y todavía
+// arrastra una cuota gratuita diminuta (20 solicitudes/día por proyecto).
+// gemini-3.5-flash es prácticamente el mismo nivel de calidad para lo que
+// necesita esta app (chat, quiz, transcripción, paso a paso) pero con una
+// cuota gratuita muchísimo más amplia. Si más adelante activas facturación
+// (Blaze/pago por uso) puedes volver a "gemini-3.6-flash" sin cambiar nada
+// más — el resto del código no depende del modelo específico.
+const MODEL = "gemini-3.5-flash";
 const URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${GEMINI_API_KEY}`;
 
 export async function preguntarIA({ pregunta, contextoTexto, historial = [] }) {
@@ -82,6 +89,25 @@ async function llamarGemini(contents, generationConfig) {
   if (!res.ok) {
     const errBody = await res.text().catch(() => "");
     console.error("Error llamando a Gemini:", res.status, errBody);
+
+    if (res.status === 429) {
+      let segundos = null;
+      try {
+        const parsed = JSON.parse(errBody);
+        const retryInfo = parsed?.error?.details?.find(
+          (d) => d["@type"] === "type.googleapis.com/google.rpc.RetryInfo"
+        );
+        if (retryInfo?.retryDelay) segundos = parseInt(retryInfo.retryDelay, 10);
+      } catch {
+        // si no se pudo parsear el detalle, seguimos con mensaje genérico
+      }
+      throw new Error(
+        segundos
+          ? `Se alcanzó el límite de uso de la IA por ahora. Intenta de nuevo en ${segundos} segundos.`
+          : "Se alcanzó el límite de uso de la IA por hoy. Intenta de nuevo más tarde."
+      );
+    }
+
     throw new Error("No se pudo obtener respuesta de la IA. Intenta de nuevo.");
   }
 
