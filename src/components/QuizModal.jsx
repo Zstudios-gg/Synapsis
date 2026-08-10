@@ -4,11 +4,12 @@ import {
   CheckCircle2, XCircle, RotateCcw, ListChecks,
 } from "lucide-react";
 import { generarQuiz, evaluarRespuestasAbiertas } from "../lib/gemini";
+import { saveQuizResult } from "../lib/firestore";
 import StepByStepPanel from "./StepByStepPanel";
 
 const CANTIDADES = [5, 8, 12];
 
-export default function QuizModal({ folderName, notes, attachments, onClose }) {
+export default function QuizModal({ uid, carpetaId, folderName, notes, attachments, onClose }) {
   // fase: "setup" | "generando" | "tomando" | "calificando" | "resultados"
   const [fase, setFase] = useState("setup");
   const [error, setError] = useState(null);
@@ -110,8 +111,32 @@ export default function QuizModal({ folderName, notes, attachments, onClose }) {
         }
       });
 
-      setResultados({ total: preguntas.length, correctas, detalle });
+      const total = preguntas.length;
+      setResultados({ total, correctas, detalle });
       setFase("resultados");
+
+      // Guardado automático del resultado (Sección 10.1): no requiere
+      // acción del usuario, así el historial existe desde el primer quiz.
+      // No bloquea la UI ni tumba la pantalla de resultados si falla.
+      if (uid && carpetaId) {
+        const detalleGuardable = detalle.map((d) => ({
+          pregunta: d.pregunta.pregunta,
+          tipo: d.pregunta.tipo,
+          ok: d.ok,
+          respuestaUsuario:
+            d.pregunta.tipo === "opcion_multiple"
+              ? d.pregunta.opciones[d.elegida] ?? "(sin responder)"
+              : d.respuestaUsuario || "(sin responder)",
+          respuestaCorrecta:
+            d.pregunta.tipo === "opcion_multiple"
+              ? d.pregunta.opciones[d.pregunta.respuestaCorrecta]
+              : d.pregunta.respuestaModelo,
+          feedback: d.feedback || null,
+        }));
+        saveQuizResult(uid, carpetaId, { total, correctas, detalle: detalleGuardable }).catch((err) =>
+          console.error("No se pudo guardar el resultado del quiz:", err)
+        );
+      }
     } catch (err) {
       console.error(err);
       setError(err.message || "No se pudieron calificar las respuestas.");
@@ -389,7 +414,9 @@ export default function QuizModal({ folderName, notes, attachments, onClose }) {
         )}
       </div>
 
-      {showSteps && <StepByStepPanel origen={stepsOrigen} onClose={() => setShowSteps(false)} />}
+      {showSteps && (
+        <StepByStepPanel uid={uid} carpetaId={carpetaId} origen={stepsOrigen} onClose={() => setShowSteps(false)} />
+      )}
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { X, Loader2, ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
+import { X, Loader2, ChevronLeft, ChevronRight, Sparkles, Save, Check } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
@@ -7,26 +7,57 @@ import rehypeKatex from "rehype-katex";
 import "katex/dist/katex.min.css";
 import { generarPasos } from "../lib/gemini";
 import { montarGeoGebra, correrComandos, limpiarGeoGebra } from "../lib/geogebra";
+import { savePasoAPaso } from "../lib/firestore";
 
 const GGB_CONTAINER_ID = "ggb-paso-a-paso";
+
+// Resumen corto para mostrar en el historial y guardar junto con los pasos.
+function resumirOrigen(origen) {
+  if (!origen) return "Ejercicio";
+  if (origen.tipo === "texto") return origen.valor.slice(0, 80);
+  if (origen.tipo === "adjunto") return origen.adjunto?.nombreArchivo || "Adjunto";
+  if (origen.tipo === "quiz") return origen.pregunta?.slice(0, 80) || "Pregunta de quiz";
+  return "Ejercicio";
+}
 
 // origen:
 //   { tipo: "texto", valor }                                        → nota, selección, o ejercicio escrito
 //   { tipo: "adjunto", adjunto }                                    → objeto de Firestore con urlStorage
 //   { tipo: "quiz", pregunta, respuestaUsuario, respuestaCorrecta } → pregunta fallida del quiz
 //   null                                                             → muestra un textarea para que el usuario escriba el ejercicio
-export default function StepByStepPanel({ origen: origenInicial, onClose }) {
+//
+// pasosGuardados: si viene con un arreglo de pasos ya generado (desde el
+// historial), el panel se abre directo en modo lectura, sin llamar a
+// Gemini y sin mostrar el botón de guardar (ya está guardado).
+export default function StepByStepPanel({ uid, carpetaId, origen: origenInicial, pasosGuardados = null, onClose }) {
   // fase: "capturar" | "cargando" | "elegir" | "pasos" | "error"
-  const [fase, setFase] = useState(origenInicial ? "cargando" : "capturar");
+  const [fase, setFase] = useState(pasosGuardados ? "pasos" : origenInicial ? "cargando" : "capturar");
   const [error, setError] = useState(null);
   const [textoLibre, setTextoLibre] = useState("");
   const [opciones, setOpciones] = useState([]);
-  const [pasos, setPasos] = useState([]);
+  const [pasos, setPasos] = useState(pasosGuardados || []);
   const [indice, setIndice] = useState(0);
-  const [usaGeoGebra, setUsaGeoGebra] = useState(false);
+  const [usaGeoGebra, setUsaGeoGebra] = useState(
+    pasosGuardados ? pasosGuardados.some((p) => p.geogebra?.length > 0) : false
+  );
+  const [guardando, setGuardando] = useState(false);
+  const [guardado, setGuardado] = useState(false);
 
   const origenRef = useRef(origenInicial);
   const ggbRef = useRef(null);
+
+  async function handleGuardar() {
+    if (!uid || !carpetaId || guardando || guardado) return;
+    setGuardando(true);
+    try {
+      await savePasoAPaso(uid, carpetaId, { resumen: resumirOrigen(origenRef.current), pasos });
+      setGuardado(true);
+    } catch (err) {
+      console.error("No se pudo guardar el paso a paso:", err);
+    } finally {
+      setGuardando(false);
+    }
+  }
 
   async function pedirPasos(opcionElegida = null) {
     setError(null);
@@ -172,6 +203,27 @@ export default function StepByStepPanel({ origen: origenInicial, onClose }) {
               <span className="text-xs text-text-muted">
                 Paso {indice + 1} de {pasos.length}
               </span>
+              {!pasosGuardados && uid && carpetaId && (
+                <button
+                  onClick={handleGuardar}
+                  disabled={guardando || guardado}
+                  className="flex items-center gap-1.5 text-xs text-accent hover:text-text-primary disabled:opacity-60 disabled:cursor-default"
+                >
+                  {guardado ? (
+                    <>
+                      <Check size={13} /> Guardado
+                    </>
+                  ) : guardando ? (
+                    <>
+                      <Loader2 size={13} className="animate-spin" /> Guardando...
+                    </>
+                  ) : (
+                    <>
+                      <Save size={13} /> Guardar
+                    </>
+                  )}
+                </button>
+              )}
             </div>
 
             <div className="w-full h-1 bg-card rounded-full mb-4 shrink-0 overflow-hidden">

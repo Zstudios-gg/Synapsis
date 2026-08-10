@@ -1,9 +1,11 @@
 import React, { useRef, useState } from "react";
-import { Plus, FileText, Paperclip, Trash2, ChevronRight, Mic, Square, Loader2, ArrowLeft, Sparkles, Lightbulb } from "lucide-react";
+import { Plus, FileText, Paperclip, Trash2, ChevronRight, Mic, Square, Loader2, ArrowLeft, Sparkles, Lightbulb, History } from "lucide-react";
 import QuizModal from "./QuizModal";
 import StepByStepPanel from "./StepByStepPanel";
+import HistorialModal from "./HistorialModal";
 
 export default function NotesPanel({
+  uid, carpetaId,
   folderName, notes, attachments, activeNote,
   onCreateNote, onSelectNote, onUpdateNote, onDeleteNote,
   onUploadFile, onUploadAudio, transcribing, transcribeError,
@@ -17,9 +19,21 @@ export default function NotesPanel({
   const [showQuiz, setShowQuiz] = useState(false);
   const [showSteps, setShowSteps] = useState(false);
   const [stepsOrigen, setStepsOrigen] = useState(null);
+  const [pasosGuardados, setPasosGuardados] = useState(null);
+  const [showHistorial, setShowHistorial] = useState(false);
 
   function abrirPasoAPaso(origen = null) {
+    setPasosGuardados(null);
     setStepsOrigen(origen);
+    setShowSteps(true);
+  }
+
+  // Abre el panel de paso a paso en modo "lectura" con pasos ya guardados
+  // del historial, sin volver a llamar a Gemini.
+  function abrirPasosGuardados(pasoDoc) {
+    setStepsOrigen(null);
+    setPasosGuardados(pasoDoc.pasos);
+    setShowHistorial(false);
     setShowSteps(true);
   }
 
@@ -110,6 +124,13 @@ export default function NotesPanel({
             className="flex items-center gap-1.5 text-xs text-accent hover:text-text-primary disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <Lightbulb size={13} /> Explicar ejercicio
+          </button>
+          <button
+            onClick={() => setShowHistorial(true)}
+            disabled={!folderName}
+            className="flex items-center gap-1.5 text-xs text-accent hover:text-text-primary disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <History size={13} /> Historial
           </button>
         </div>
         {transcribing && (
@@ -211,6 +232,8 @@ export default function NotesPanel({
 
       {showQuiz && (
         <QuizModal
+          uid={uid}
+          carpetaId={carpetaId}
           folderName={folderName}
           notes={notes}
           attachments={attachments}
@@ -218,7 +241,25 @@ export default function NotesPanel({
         />
       )}
 
-      {showSteps && <StepByStepPanel origen={stepsOrigen} onClose={() => setShowSteps(false)} />}
+      {showSteps && (
+        <StepByStepPanel
+          uid={uid}
+          carpetaId={carpetaId}
+          origen={stepsOrigen}
+          pasosGuardados={pasosGuardados}
+          onClose={() => setShowSteps(false)}
+        />
+      )}
+
+      {showHistorial && (
+        <HistorialModal
+          uid={uid}
+          carpetaId={carpetaId}
+          folderName={folderName}
+          onAbrirPasos={abrirPasosGuardados}
+          onClose={() => setShowHistorial(false)}
+        />
+      )}
     </div>
   );
 }
